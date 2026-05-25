@@ -6,7 +6,7 @@ import vehRoutes from './routes/vehicleRoutes.js';
 import kpiRoutes from './routes/vehicleKpisRoutes.js';
 import dashboardRoutes from './routes/dashboardRoutes.js';
 
-import { refreshKpis } from './jobs/kpiJob.js';
+import { startKpiScheduler } from './jobs/kpiJob.js';
 
 dotenv.config();
 
@@ -56,18 +56,9 @@ app.get('/health', (req, res) => {
 });
 
 // =========================
-// JOB
+// SCHEDULER
 // =========================
-async function startJobs() {
-  try {
-    console.log('Iniciando KPI JOB...');
-    await refreshKpis();
-  } catch (err) {
-    console.error('Erro no KPI JOB:', err.message);
-  }
-}
-
-startJobs();
+startKpiScheduler();
 
 // =========================
 // START

@@ -4,21 +4,30 @@ import { saveVehicleKpis } from '../services/vehicleKpiQueryService.js';
 export async function refreshKpis() {
   try {
     console.log('Iniciando KPI JOB...');
-
     const kpis = await buildVehicleKpis();
-
     if (!kpis.length) {
       console.log('Nenhum KPI gerado');
       return;
     }
-
     console.log(`KPIs gerados: ${kpis.length} veículos`);
-
     await saveVehicleKpis(kpis);
-
     console.log('KPIs por veículo atualizados com sucesso');
-
   } catch (err) {
     console.error('Erro KPI JOB:', err.message);
   }
+}
+
+export function startKpiScheduler() {
+  // Roda imediatamente ao iniciar
+  refreshKpis();
+
+  // Roda todo dia à meia-noite
+  const VINTE_QUATRO_HORAS = 24 * 60 * 60 * 1000;
+  setInterval(() => {
+    const agora = new Date();
+    console.log(`[SCHEDULER] Executando refresh às ${agora.toISOString()}`);
+    refreshKpis();
+  }, VINTE_QUATRO_HORAS);
+
+  console.log('[SCHEDULER] KPI Job agendado — executa a cada 24 horas');
 }
