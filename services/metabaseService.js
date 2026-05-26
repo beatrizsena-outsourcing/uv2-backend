@@ -1,6 +1,18 @@
+Agora vamos atualizar o backend. Execute:
+
+```bash
+cd C:\Users\beatr\OneDrive\Documentos\UTV2\src
+```
+
+```bash
+notepad services\metabaseService.js
+```
+
+Substitua todo o conteúdo por:
+
+```javascript
 import axios from 'axios';
 import dotenv from 'dotenv';
-
 dotenv.config();
 
 const metabase = axios.create({
@@ -8,40 +20,36 @@ const metabase = axios.create({
   timeout: 120000
 });
 
-/**
- * =========================
- * AUTENTICAÇÃO METABASE
- * =========================
- */
 async function authenticateMetabase() {
   try {
     const response = await metabase.post('/api/session', {
       username: process.env.METABASE_EMAIL,
       password: process.env.METABASE_PASSWORD
     });
-
     return response.data.id;
-
   } catch (err) {
-    console.error('❌ Erro autenticação Metabase:', err.message);
+    console.error('Erro ao autenticar no Metabase:', err.message);
     throw err;
   }
 }
 
-/**
- * =========================
- * BUSCA DADOS VEÍCULO
- * =========================
- */
-export async function getVehicleUtilization() {
+export async function getVehicleUtilization(year, month) {
   try {
-    console.log('🔄 Buscando dados do Metabase...');
+    const yearStr = year ? String(year) : String(new Date().getFullYear());
+    const monthStr = month ? String(month).padStart(2, '0') : String(new Date().getMonth() + 1).padStart(2, '0');
+
+    console.log(`Buscando dados do Metabase — ${yearStr}/${monthStr}...`);
 
     const token = await authenticateMetabase();
 
     const response = await metabase.post(
       '/api/card/5383/query/json',
-      {},
+      {
+        parameters: [
+          { type: 'category', target: ['variable', ['template-tag', 'year']], value: yearStr },
+          { type: 'category', target: ['variable', ['template-tag', 'month']], value: monthStr }
+        ]
+      },
       {
         headers: {
           'X-Metabase-Session': token
@@ -51,21 +59,19 @@ export async function getVehicleUtilization() {
 
     const data = response.data || [];
 
-    // =========================
-    // DEBUG CRÍTICO (IMPORTANTE)
-    // =========================
-    console.log('📊 TOTAL REGISTROS:', data.length);
-
+    console.log(`Total registros ${yearStr}/${monthStr}:`, data.length);
     if (data.length > 0) {
-      console.log('📊 EXEMPLO ITEM METABASE:', data[0]);
+      console.log('Exemplo:', data[0]);
     } else {
-      console.warn('⚠️ Metabase retornou vazio');
+      console.warn('Metabase retornou vazio');
     }
 
     return data;
-
   } catch (err) {
-    console.error('❌ Erro getVehicleUtilization:', err.message);
-    return [];
+    console.error('Erro ao buscar dados do Metabase:', err.message);
+    throw err;
   }
 }
+```
+
+Salve com **Ctrl+S** e feche. Me avisa quando terminar que atualizo a rota do heatmap.

@@ -5,14 +5,13 @@ import { getVehicleUtilization } from '../services/metabaseService.js';
 // =====================================================
 export const fetchVehicleUtilization = async (req, res) => {
   try {
-    const data = await getVehicleUtilization();
-
+    const { year, month } = req.query;
+    const data = await getVehicleUtilization(year, month);
     return res.status(200).json({
       success: true,
       total: data.length,
       data
     });
-
   } catch (error) {
     return res.status(500).json({
       success: false,
@@ -26,11 +25,9 @@ export const fetchVehicleUtilization = async (req, res) => {
 // =====================================================
 export const fetchVehicleHeatmap = async (req, res) => {
   try {
-    const data = await getVehicleUtilization();
-
-    let filtered = data;
-
     const {
+      year,
+      month,
       vehicle_id,
       startHour,
       endHour,
@@ -39,11 +36,14 @@ export const fetchVehicleHeatmap = async (req, res) => {
       limit
     } = req.query;
 
+    const data = await getVehicleUtilization(year, month);
+    let filtered = data;
+
     // =========================
     // FILTRO POR VEÍCULO
     // =========================
     if (vehicle_id) {
-      filtered = filtered.filter(i => i.vehicle_id === vehicle_id);
+      filtered = filtered.filter(i => i.veiculo === vehicle_id);
     }
 
     // =========================
@@ -52,9 +52,7 @@ export const fetchVehicleHeatmap = async (req, res) => {
     if (startHour && endHour) {
       filtered = filtered.filter(i => {
         if (!i.hora) return false;
-
         const hora = Number(String(i.hora).slice(0, 2));
-
         return hora >= Number(startHour) && hora <= Number(endHour);
       });
     }
@@ -79,7 +77,6 @@ export const fetchVehicleHeatmap = async (req, res) => {
       total: result.length,
       data: result
     });
-
   } catch (error) {
     return res.status(500).json({
       success: false,
@@ -93,15 +90,14 @@ export const fetchVehicleHeatmap = async (req, res) => {
 // =====================================================
 export const fetchVehicleFilters = async (req, res) => {
   try {
-    const data = await getVehicleUtilization();
-
-    const { vehicle_id } = req.query;
+    const { year, month, vehicle_id } = req.query;
+    const data = await getVehicleUtilization(year, month);
 
     // =========================
     // LISTA DE VEÍCULOS
     // =========================
     const vehicles = [...new Set(
-      data.map(i => i.vehicle_id).filter(Boolean)
+      data.map(i => i.veiculo).filter(Boolean)
     )].map(v => ({
       label: v,
       value: v
@@ -111,9 +107,8 @@ export const fetchVehicleFilters = async (req, res) => {
     // APLICA FILTRO OPCIONAL
     // =========================
     let filtered = data;
-
     if (vehicle_id) {
-      filtered = data.filter(i => i.vehicle_id === vehicle_id);
+      filtered = data.filter(i => i.veiculo === vehicle_id);
     }
 
     return res.json({
@@ -123,7 +118,6 @@ export const fetchVehicleFilters = async (req, res) => {
         total: filtered.length
       }
     });
-
   } catch (error) {
     return res.status(500).json({
       success: false,
