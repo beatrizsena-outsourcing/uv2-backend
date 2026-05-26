@@ -1,16 +1,3 @@
-Agora vamos atualizar o backend. Execute:
-
-```bash
-cd C:\Users\beatr\OneDrive\Documentos\UTV2\src
-```
-
-```bash
-notepad services\metabaseService.js
-```
-
-Substitua todo o conteúdo por:
-
-```javascript
 import axios from 'axios';
 import dotenv from 'dotenv';
 dotenv.config();
@@ -72,6 +59,3 @@ export async function getVehicleUtilization(year, month) {
     throw err;
   }
 }
-```
-
-Salve com **Ctrl+S** e feche. Me avisa quando terminar que atualizo a rota do heatmap.
