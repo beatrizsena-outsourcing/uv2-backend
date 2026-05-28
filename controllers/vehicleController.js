@@ -27,29 +27,34 @@ function applyFilters(data, { vehicle_id, startHour, endHour, startDate, endDate
 }
 
 // =====================================================
-// HELPER — amostra máx N pontos por veículo
+// HELPER — agrupa pontos geográficos próximos
+// Mantém densidade proporcional com menos pontos
+// precision=2 → células de ~1km
 // =====================================================
-function sampleByVehicle(data, maxPerVehicle = 200) {
-  const groups = new Map();
-  for (const row of data) {
-    const key = row.veiculo || 'unknown';
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key).push(row);
-  }
+function clusterPoints(data, precision = 2) {
+  const cells = new Map();
 
-  const result = [];
-  for (const [, rows] of groups) {
-    if (rows.length <= maxPerVehicle) {
-      result.push(...rows);
+  for (const row of data) {
+    const lat = parseFloat(row.latitude || 0).toFixed(precision);
+    const lon = parseFloat(row.longitude || 0).toFixed(precision);
+    const key = `${lat},${lon}`;
+
+    if (!cells.has(key)) {
+      cells.set(key, { ...row, _count: 1, _latSum: parseFloat(row.latitude || 0), _lonSum: parseFloat(row.longitude || 0) });
     } else {
-      // Amostragem uniforme
-      const step = rows.length / maxPerVehicle;
-      for (let i = 0; i < maxPerVehicle; i++) {
-        result.push(rows[Math.floor(i * step)]);
-      }
+      const cell = cells.get(key);
+      cell._count++;
+      cell._latSum += parseFloat(row.latitude || 0);
+      cell._lonSum += parseFloat(row.longitude || 0);
     }
   }
-  return result;
+
+  return Array.from(cells.values()).map(cell => ({
+    ...cell,
+    latitude: (cell._latSum / cell._count).toFixed(6),
+    longitude: (cell._lonSum / cell._count).toFixed(6),
+    _intensity: cell._count,
+  }));
 }
 
 // =====================================================
@@ -94,21 +99,21 @@ export const fetchVehicleFilters = async (req, res) => {
 };
 
 // =====================================================
-// FRETADÃO — HEATMAP (com amostragem por veículo)
+// FRETADÃO — HEATMAP (com clustering geográfico)
 // =====================================================
 export const fetchFretadaoHeatmap = async (req, res) => {
   try {
     const data = await getFretadaoUtilization(req.query.year, req.query.month);
 
-    // Aplica filtros de veículo/data/hora antes de amostrar
+    // Aplica filtros sem limite
     let filtered = applyFilters(data, { ...req.query, limit: 9999999 });
 
-    // Amostra 200 pontos por veículo para não travar o browser
-    const sampled = sampleByVehicle(filtered, 200);
+    // Agrupa pontos próximos — mantém densidade proporcional
+    const clustered = clusterPoints(filtered, 2);
 
-    console.log(`[Fretadão] Total: ${data.length} → filtrado: ${filtered.length} → amostrado: ${sampled.length}`);
+    console.log(`[Fretadão] Total: ${data.length} → filtrado: ${filtered.length} → clusterizado: ${clustered.length}`);
 
-    return res.json({ success: true, total: sampled.length, data: sampled });
+    return res.json({ success: true, total: clustered.length, data: clustered });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }
