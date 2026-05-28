@@ -27,6 +27,32 @@ function applyFilters(data, { vehicle_id, startHour, endHour, startDate, endDate
 }
 
 // =====================================================
+// HELPER — amostra máx N pontos por veículo
+// =====================================================
+function sampleByVehicle(data, maxPerVehicle = 200) {
+  const groups = new Map();
+  for (const row of data) {
+    const key = row.veiculo || 'unknown';
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(row);
+  }
+
+  const result = [];
+  for (const [, rows] of groups) {
+    if (rows.length <= maxPerVehicle) {
+      result.push(...rows);
+    } else {
+      // Amostragem uniforme
+      const step = rows.length / maxPerVehicle;
+      for (let i = 0; i < maxPerVehicle; i++) {
+        result.push(rows[Math.floor(i * step)]);
+      }
+    }
+  }
+  return result;
+}
+
+// =====================================================
 // VESTAS — UTILIZAÇÃO
 // =====================================================
 export const fetchVehicleUtilization = async (req, res) => {
@@ -68,13 +94,21 @@ export const fetchVehicleFilters = async (req, res) => {
 };
 
 // =====================================================
-// FRETADÃO — HEATMAP
+// FRETADÃO — HEATMAP (com amostragem por veículo)
 // =====================================================
 export const fetchFretadaoHeatmap = async (req, res) => {
   try {
     const data = await getFretadaoUtilization(req.query.year, req.query.month);
-    const result = applyFilters(data, req.query);
-    return res.json({ success: true, total: result.length, data: result });
+
+    // Aplica filtros de veículo/data/hora antes de amostrar
+    let filtered = applyFilters(data, { ...req.query, limit: 9999999 });
+
+    // Amostra 200 pontos por veículo para não travar o browser
+    const sampled = sampleByVehicle(filtered, 200);
+
+    console.log(`[Fretadão] Total: ${data.length} → filtrado: ${filtered.length} → amostrado: ${sampled.length}`);
+
+    return res.json({ success: true, total: sampled.length, data: sampled });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }
