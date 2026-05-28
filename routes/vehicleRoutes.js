@@ -3,24 +3,24 @@ import express from 'express';
 import {
   fetchVehicleUtilization,
   fetchVehicleHeatmap,
-  fetchVehicleFilters
+  fetchVehicleFilters,
+  fetchFretadaoHeatmap,
+  fetchFretadaoFilters
 } from '../controllers/vehicleController.js';
 
 const router = express.Router();
 
 // =========================
-// UTILIZAÇÃO
+// VESTAS
 // =========================
 router.get('/utilization', fetchVehicleUtilization);
-
-// =========================
-// HEATMAP
-// =========================
 router.get('/heatmap', fetchVehicleHeatmap);
+router.get('/filters', fetchVehicleFilters);
 
 // =========================
-// FILTROS DROPDOWN
+// FRETADÃO
 // =========================
-router.get('/filters', fetchVehicleFilters);
+router.get('/fretadao/heatmap', fetchFretadaoHeatmap);
+router.get('/fretadao/filters', fetchFretadaoFilters);
 
 export default router;
