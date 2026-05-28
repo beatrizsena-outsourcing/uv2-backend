@@ -51,8 +51,8 @@ function clusterPoints(data, precision = 2) {
 
   return Array.from(cells.values()).map(cell => ({
     ...cell,
-    latitude: (cell._latSum / cell._count).toFixed(6),
-    longitude: (cell._lonSum / cell._count).toFixed(6),
+    latitude: cell._latSum / cell._count,
+    longitude: cell._lonSum / cell._count,
     _intensity: cell._count,
   }));
 }
